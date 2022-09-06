@@ -29,10 +29,10 @@ fn main(){
 #[derive(Component)]
 struct Player;
 
-#[derive(Component)]
-struct MainCamera;
-
-fn move_player(keys: Res<Input<KeyCode>>, mut player_query: Query<&mut Transform, With<Player>>){
+fn move_player(
+    keys: Res<Input<KeyCode>>, 
+    mut query: Query<(&mut Transform, &mut Transform), (With<Player>, With<PanOrbitCamera>)>,
+){
     let mut direction = Vec3::ZERO;
     if keys.any_pressed([KeyCode::W]) {
         direction.z -= 1.;
@@ -50,8 +50,9 @@ fn move_player(keys: Res<Input<KeyCode>>, mut player_query: Query<&mut Transform
     let move_speed = 0.13;
     let move_delta = direction * move_speed;
 
-    for mut transform in player_query.iter_mut() {
-        transform.translation += move_delta;
+    for (mut player_query, mut camera_query) in query.iter_mut() {
+        player_query.translation += move_delta;
+        camera_query.translation += move_delta;
     }
 }
 
