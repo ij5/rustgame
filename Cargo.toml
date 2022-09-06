@@ -8,4 +8,3 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.8.1", features = ["filesystem_watcher"] }
 bevy_vox_mesh = "0.4.0"
-smooth-bevy-cameras = { git = "https://github.com/bonsairobo/smooth-bevy-cameras" }

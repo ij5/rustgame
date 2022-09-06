@@ -1,8 +1,9 @@
-use bevy::{prelude::*, input::mouse::MouseMotion};
+use std::f32::consts::PI;
+
+use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}, render::camera::Projection};
 use bevy_vox_mesh::VoxMeshPlugin;
 // use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 // use std::f32::consts::PI;
-use smooth_bevy_cameras::{LookTransform, LookTransformBundle, LookTransformPlugin, Smoother};
 
 fn main(){
     println!("Game started...");
@@ -17,7 +18,6 @@ fn main(){
         // .add_plugin(LogDiagnosticsPlugin::default())
         // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(VoxMeshPlugin::default())
-        .add_plugin(LookTransformPlugin)
         .add_startup_system(setup)
         .add_startup_system(spawn_player)
         .add_system(move_player)
@@ -56,22 +56,48 @@ fn move_player(keys: Res<Input<KeyCode>>, mut player_query: Query<&mut Transform
 }
 
 fn mouse_motion(
-    mut motion_evr: EventReader<MouseMotion>,
+    mut ev_motion: EventReader<MouseMotion>,
     windows: Res<Windows>,
-    mut camera_query: Query<&mut LookTransform, With<MainCamera>>,
+    mut ev_scroll: EventReader<MouseWheel>,
+    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
 ) {
     let window = windows.get_primary().unwrap();
     if !window.cursor_locked() {
         return;
     }
-    for ev in motion_evr.iter() {
-        let mut direction = Vec3::ZERO;
-        direction.x -= ev.delta.x;
-        direction.y += ev.delta.y;
-        let move_delta = direction * 0.1;
-        for mut transform in camera_query.iter_mut() {
-            transform.eye += move_delta;
-            transform.look_direction();
+    let mut rotation_move = Vec2::ZERO;
+    let mut scroll = 0.0;
+    for ev in ev_motion.iter() {
+        rotation_move += ev.delta;
+    }
+
+    for ev in ev_scroll.iter() {
+        scroll += ev.y;
+    }
+
+    for (mut orbit, mut transform, _projection) in query.iter_mut() {
+        let mut any = false;
+        if rotation_move.length_squared() > 0. {
+            any = true;
+            let window = get_primary_window_size(&windows);
+            let delta_x = {
+                let delta = rotation_move.x / window.x * PI * 2.0;
+                if orbit.upside_down { -delta } else { delta }
+            };
+            let delta_y = rotation_move.y / window.y * PI;
+            let yaw = Quat::from_rotation_y(-delta_x);
+            let pitch = Quat::from_rotation_x(-delta_y);
+            transform.rotation = yaw * transform.rotation;
+            transform.rotation = transform.rotation * pitch;
+        } else if scroll.abs() > 0.0 {
+            any = true;
+            orbit.radius -= scroll * orbit.radius * 0.2;
+            orbit.radius = f32::max(orbit.radius, 0.05);
+        }
+
+        if any {
+            let rot_matrix = Mat3::from_quat(transform.rotation);
+            transform.translation = orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, orbit.radius));
         }
     }
 }
@@ -103,18 +129,37 @@ fn cursor_grab_system(
     }
 }
 
+#[derive(Component)]
+struct PanOrbitCamera {
+    pub focus: Vec3,
+    pub radius: f32,
+    pub upside_down: bool
+}
+
+impl Default for PanOrbitCamera {
+    fn default() -> Self {
+        PanOrbitCamera { focus: Vec3::ZERO, radius: 5., upside_down: false }
+    }
+}
+
+fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
+    let window = windows.get_primary().unwrap();
+    let window = Vec2::new(window.width() as f32, window.height() as f32);
+    window
+}
+
 fn setup(
     mut commands: Commands,
 ) {
-    let eye = Vec3::new(0., 3., 7.);
-    let target = Vec3::new(0., 0., 0.);
-    commands.spawn_bundle(LookTransformBundle {
-        transform: LookTransform::new(eye, target),
-        smoother: Smoother::new(0.9),
-    }).insert_bundle(Camera3dBundle {
-        transform: Transform::from_xyz(0., 3., 7.).looking_at(Vec3::ZERO, Vec3::Y),
+    let translation = Vec3::new(0., 3., 7.);
+    let radius = translation.length();
+    commands.spawn_bundle(Camera3dBundle {
+        transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
         ..Default::default()
-    }).insert(MainCamera);
+    }).insert(PanOrbitCamera {
+        radius,
+        ..Default::default()
+    });
 
     commands.spawn_bundle(PointLightBundle {
         transform: Transform::from_xyz(-1.0, 3., 5.0).looking_at(Vec3::ZERO, Vec3::Y),
