@@ -34,6 +34,7 @@ fn move_player(
     mut set: ParamSet<(
         Query<&mut Transform, With<Player>>,
         Query<&mut Transform, With<PanOrbitCamera>>,
+        Query<&mut PanOrbitCamera>,
     )>,
 ){
     let mut direction = Vec3::ZERO;
@@ -59,13 +60,16 @@ fn move_player(
     for mut camera_query in set.p1().iter_mut() {
         camera_query.translation += move_delta;
     }
+    for mut camera_query in set.p2().iter_mut() {
+        camera_query.focus += move_delta;
+    }
 }
 
 fn mouse_motion(
     mut ev_motion: EventReader<MouseMotion>,
     windows: Res<Windows>,
     mut ev_scroll: EventReader<MouseWheel>,
-    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection)>,
+    mut query: Query<(&mut PanOrbitCamera, &mut Transform, &Projection), With<PanOrbitCamera>>,
 ) {
     let window = windows.get_primary().unwrap();
     if !window.cursor_locked() {
