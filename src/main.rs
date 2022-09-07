@@ -1,6 +1,10 @@
 use std::f32::consts::PI;
-
-use bevy::{prelude::*, input::mouse::{MouseMotion, MouseWheel}, render::camera::Projection};
+use bevy::{
+    prelude::*, 
+    input::mouse::{MouseMotion, MouseWheel}, 
+    render::camera::Projection,
+    winit::WinitSettings,
+};
 use bevy_vox_mesh::VoxMeshPlugin;
 // use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 // use std::f32::consts::PI;
@@ -18,6 +22,7 @@ fn main(){
         // .add_plugin(LogDiagnosticsPlugin::default())
         // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(VoxMeshPlugin::default())
+        .insert_resource(WinitSettings::desktop_app())
         .add_startup_system(setup)
         .add_startup_system(spawn_player)
         .add_system(move_player)
