@@ -3,9 +3,9 @@ use bevy::{
     prelude::*, 
     input::mouse::{MouseMotion, MouseWheel}, 
     render::camera::Projection,
-    winit::WinitSettings,
 };
 use bevy_vox_mesh::VoxMeshPlugin;
+use bevy_atmosphere::prelude::*;
 // use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 // use std::f32::consts::PI;
 
@@ -22,7 +22,7 @@ fn main(){
         // .add_plugin(LogDiagnosticsPlugin::default())
         // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(VoxMeshPlugin::default())
-        .insert_resource(WinitSettings::desktop_app())
+        .add_plugin(AtmospherePlugin)
         .add_startup_system(setup)
         .add_startup_system(spawn_player)
         .add_system(move_player)
@@ -92,7 +92,7 @@ fn mouse_motion(
 
     for (mut orbit, mut transform, _projection) in query.iter_mut() {
         let mut any = false;
-        if rotation_move.length_squared() > 0. {
+        if rotation_move.length_squared() > 0. && !orbit.disabled {
             any = true;
             let window = get_primary_window_size(&windows);
             let delta_x = {
@@ -148,12 +148,13 @@ fn cursor_grab_system(
 struct PanOrbitCamera {
     pub focus: Vec3,
     pub radius: f32,
-    pub upside_down: bool
+    pub upside_down: bool,
+    pub disabled: bool
 }
 
 impl Default for PanOrbitCamera {
     fn default() -> Self {
-        PanOrbitCamera { focus: Vec3::ZERO, radius: 5., upside_down: false }
+        PanOrbitCamera { focus: Vec3::ZERO, radius: 5., upside_down: false, disabled: true }
     }
 }
 
@@ -166,7 +167,7 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
 fn setup(
     mut commands: Commands,
 ) {
-    let translation = Vec3::new(0., 3., 7.);
+    let translation = Vec3::new(0., 2.5, 10.);
     let radius = translation.length();
     commands.spawn_bundle(Camera3dBundle {
         transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
@@ -174,16 +175,15 @@ fn setup(
     }).insert(PanOrbitCamera {
         radius,
         ..Default::default()
-    });
+    }).insert(AtmosphereCamera(None));
 
-    commands.spawn_bundle(PointLightBundle {
-        transform: Transform::from_xyz(-1.0, 3., 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        point_light: PointLight {
-            intensity: 1600.,
+    commands.spawn_bundle(DirectionalLightBundle {
+        transform: Transform::from_xyz(-1.0, 30., 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        directional_light: DirectionalLight {
             color: Color::WHITE,
             shadows_enabled: true,
-            radius: 20.,
-            ..default()
+            illuminance: 80000.,
+            ..Default::default()
         },
         ..default()
     });
