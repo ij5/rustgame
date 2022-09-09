@@ -167,10 +167,10 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
 fn setup(
     mut commands: Commands,
 ) {
-    let translation = Vec3::new(0., 2.5, 10.);
+    let translation = Vec3::new(1., 4., 10.);
     let radius = translation.length();
     commands.spawn_bundle(Camera3dBundle {
-        transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_translation(translation).looking_at((1., 0., 0.).into(), Vec3::Y),
         ..Default::default()
     }).insert(PanOrbitCamera {
         radius,
