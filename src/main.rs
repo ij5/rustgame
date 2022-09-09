@@ -164,6 +164,11 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
     window
 }
 
+fn load_scene(mut commands: Commands, asset: Res<AssetServer>) {
+    let world = asset.load("scene.glb");
+    
+}
+
 fn setup(
     mut commands: Commands,
 ) {
